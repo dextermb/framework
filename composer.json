@@ -1,0 +1,39 @@
+{
+  "name": "dextermb/framework",
+  "description": "A PHP framework for creating APIs",
+  "minimum-stability": "dev",
+  "type": "library",
+  "license": "MIT",
+  "keywords": [
+    "framework",
+    "php",
+    "api"
+  ],
+  "homepage": "https://github.com/dextermb/framework",
+  "support": {
+    "issues": "https://github.com/dextermb/framework/issues",
+    "source": "https://github.com/dextermb/framework"
+  },
+  "authors": [
+    {
+      "name": "Dexter Marks-Barber",
+      "email": "dexter@marks-barber.co.uk"
+    }
+  ],
+  "require": {
+    "php": "^7.0",
+    "vlucas/phpdotenv": "^2.4",
+    "doctrine/inflector": "^1.2",
+    "lcobucci/jwt": "^3.2",
+    "nesbot/carbon": "^1.22"
+  },
+  "autoload": {
+    "files": [
+      "src/Framework/Core/Helpers/Constants.php",
+      "src/Framework/Core/Helpers/Functions.php"
+    ],
+    "psr-4": {
+      "Framework\\": "src/Framework/"
+    }
+  }
+}
