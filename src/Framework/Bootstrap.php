@@ -11,3 +11,5 @@ class Bootstrap
 		(new Dotenv($_SERVER['DOCUMENT_ROOT']))->load();
 	}
 }
+
+Bootstrap::init();
