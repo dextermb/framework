@@ -66,7 +66,7 @@ class Model
 
 		if (array_key_exists($property, $this->attributes)) {
 			if (in_array($property, $this->dates)) {
-				return Carbon::createFromTimestamp($this->attributes[ $property ]);
+				return Carbon::createFromTimestamp(strtotime($this->attributes[ $property ]));
 			}
 
 			return $this->attributes[ $property ];
@@ -488,10 +488,6 @@ class Model
 
 			if (is_array($value)) {
 				$this->attributesToArray($value);
-			}
-
-			if (in_array($attribute, $this->dates)) {
-				$arr[ $attribute ] = Carbon::createFromTimestamp($value);
 			}
 		}
 
