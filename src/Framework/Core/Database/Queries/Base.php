@@ -12,8 +12,8 @@ abstract class Base
 	/** @const integer[] BASIC_COMPARISONS */
 	const BASIC_COMPARISONS
 		= [
-			F_DB_GREATER_THAN, F_DB_GREATER_OR_EQUAL_THAN,
-			F_DB_LESS_THAN, F_DB_LESS_OR_EQUAL_THAN,
+			F_DB_GREATER_THAN, F_DB_GREATER_OR_EQUAL_TO,
+			F_DB_LESS_THAN, F_DB_LESS_OR_EQUAL_TO,
 			F_DB_LIKE, F_DB_EQUALS,
 		];
 
@@ -162,13 +162,13 @@ abstract class Base
 					case F_DB_GREATER_THAN:
 						$w[] = '>';
 						break;
-					case F_DB_GREATER_OR_EQUAL_THAN:
+					case F_DB_GREATER_OR_EQUAL_TO:
 						$w[] = '>=';
 						break;
 					case F_DB_LESS_THAN:
 						$w[] = '<';
 						break;
-					case F_DB_LESS_OR_EQUAL_THAN:
+					case F_DB_LESS_OR_EQUAL_TO:
 						$w[] = '<=';
 						break;
 					case F_DB_LIKE:

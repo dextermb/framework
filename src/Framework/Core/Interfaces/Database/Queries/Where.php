@@ -9,17 +9,17 @@ final class Where
 	/** @var Field|string|number|array $comparison */
 	public $comparison;
 
-	/** @var integer $comparitor */
+	/** @var string $comparitor */
 	public $comparitor;
 
-	/** @var integer $relation */
+	/** @var string $relation */
 	public $relation;
 
-	public function __construct(Field $field = null, $comparison = null, $comparitor = null, $relation = null)
+	public function __construct(Field $field, $comparison, string $comparitor = null, string $relation = null)
 	{
 		$this->field      = $field;
 		$this->comparison = $comparison;
-		$this->comparitor = $comparitor ?: F_DB_EQUALS;
-		$this->relation   = $relation ?: F_DB_AND;
+		$this->comparitor = strtolower($comparitor) ?: F_DB_EQUALS;
+		$this->relation   = strtolower($relation) ?: F_DB_AND;
 	}
 }

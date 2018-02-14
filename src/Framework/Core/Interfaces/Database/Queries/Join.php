@@ -9,13 +9,13 @@ final class Join
 	/** @var Field $foreign */
 	public $foreign;
 
-	/** @var integer $type */
+	/** @var string $type */
 	public $type;
 
-	public function __construct(Field $local = null, Field $foreign = null, $type = null)
+	public function __construct(Field $local, Field $foreign, string $type = null)
 	{
 		$this->local   = $local;
 		$this->foreign = $foreign;
-		$this->type    = $type;
+		$this->type    = strtolower($type) ?: F_DB_INNER_JOIN;
 	}
 }
