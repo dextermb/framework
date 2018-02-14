@@ -2,12 +2,36 @@
 namespace Framework\Core\Http;
 
 use Lcobucci\JWT\Token;
-
 use Framework\Core\Helpers\Auth;
 use Framework\Core\Exceptions\AuthException;
 
-use Framework\Core\Database\Model;
+use Framework\Core\Helpers\Arr;
+use Framework\Core\Exceptions\ArrayException;
 
+use Framework\Core\Helpers\Str;
+use Framework\Core\Database\Model;
+use Framework\Core\Exceptions\ValidationException;
+
+/**
+ * Class Request
+ *
+ * @method setModel(string $key, $value)
+ * @method setArgument(string $key, $value)
+ * @method setData(string $key, $value)
+ * @method setHeader(string $key, $value)
+ *
+ * @method getModel(string $key)
+ * @method getArgument(string $key)
+ * @method getData(string $key)
+ * @method getHeader(string $key)
+ *
+ * @method models()
+ * @method arguments()
+ * @method data()
+ * @method headers()
+ *
+ * @package Framework\Core\Http
+ */
 class Request
 {
 	/** @var Model[] $models */
@@ -16,89 +40,56 @@ class Request
 	/** @var array $arguments */
 	protected $arguments;
 
+	/** @var array $data */
+	protected $data;
+
 	/** @var array $headers */
 	protected $headers;
 
-	public function __construct(array $models = [], array $arguments = [], array $headers = [])
+	/** @var Validator $validator */
+	protected $validator;
+
+	/** @var string[] $errors */
+	public $errors;
+
+	public function __construct(array $models = [], array $arguments = [], array $data = [], array $headers = [])
 	{
 		$this->models    = $models;
 		$this->arguments = $arguments;
+		$this->data      = $data;
 		$this->headers   = $headers;
+
+		$this->validator = new Validator($this);
+		$this->errors    = [];
 	}
 
-	/**
-	 * Set a model
-	 *
-	 * @param string $key
-	 * @param Model  $model
-	 * @return $this
-	 */
-	public function setModel(string $key, Model $model)
+	public function __call($method, $args)
 	{
-		$this->models[ strtolower($key) ] = $model;
+		$property = strtolower(preg_replace('/set|get/', '', $method));
 
-		return $this;
-	}
+		if (!property_exists($this, $property = Str::pluralize($property))) {
+			return $this;
+		}
 
-	/**
-	 * Set an argument
-	 *
-	 * @param string         $key
-	 * @param string|integer $value
-	 * @return $this
-	 */
-	public function setArgument(string $key, $value)
-	{
-		$this->arguments[ strtolower($key) ] = $value;
+		$key   = (string)$args[0];
+		$value = isset($args[1]) ? $args[1] : null;
 
-		return $this;
-	}
+		// Set attribute
+		if (strpos($method, 'set') === 0) {
+			$this->{strtolower($property)}[ strtolower($key) ] = $value;
 
-	/**
-	 * Set a header
-	 *
-	 * @param string         $key
-	 * @param string|integer $value
-	 * @return $this
-	 */
-	public function setHeader(string $key, $value)
-	{
-		$this->headers[ strtolower($key) ] = $value;
+			return $this;
+		}
 
-		return $this;
-	}
+		// Get attribute
+		if (strpos($method, 'get') === 0) {
+			$property = $this->{strtolower($property)};
 
-	/**
-	 * Get a model
-	 *
-	 * @param string $key
-	 * @return Model|null
-	 */
-	public function getModel(string $key)
-	{
-		return isset($this->models[ $key ]) ? $this->models[ $key ] : null;
-	}
+			return isset($property[ $key ]) ? $property[ $key ] : null;
+		}
 
-	/**
-	 * Get an argument
-	 *
-	 * @param string $key
-	 * @return mixed|null
-	 */
-	public function getArgument(string $key)
-	{
-		return isset($this->arguments[ $key ]) ? $this->arguments[ $key ] : null;
-	}
-
-	/**
-	 * Get a header
-	 *
-	 * @param string $key
-	 * @return mixed|null
-	 */
-	public function getHeader(string $key)
-	{
-		return isset($this->headers[ $key ]) ? $this->headers[ $key ] : null;
+		// Get attribute group
+		return $this->{strtolower($property)};
 	}
 
 	/**
@@ -121,33 +112,39 @@ class Request
 	}
 
 	/**
-	 * Return all models
-	 *
-	 * @return Model[]
+	 * @param string[] $rules
+	 * @throws ArrayException|ValidationException
+	 * @return $this
 	 */
-	public function models()
+	public function validate(array $rules)
 	{
-		return $this->models;
-	}
+		Arr::associative($rules, true);
 
-	/**
-	 * Return all arguments
-	 *
-	 * @return array
-	 */
-	public function arguments()
-	{
-		return $this->arguments;
-	}
+		foreach ($rules as $data => $raw) {
+			$tests = explode('|', $raw);
 
-	/**
-	 * Return all headers
-	 *
-	 * @return array
-	 */
-	public function headers()
-	{
-		return $this->headers;
+			foreach ($tests as $test) {
+				$bits = explode(':', $test);
+
+				// Database related test
+				if (isset($bits[1]) && count($query = explode(',', $bits[1])) > 1) {
+					$this->validator->setRule($data, $bits[0], $query[0], $query[1]);
+
+					continue;
+				};
+
+				// Basic test
+				$this->validator->setRule($data, $bits[0]);
+			}
+		}
+
+		if (!$this->validator->validate()) {
+			$this->errors = $this->validator->errors();
+
+			throw new ValidationException('Failed validation tests');
+		}
+
+		return $this;
 	}
 
 	/**
@@ -160,6 +157,7 @@ class Request
 		return [
 			'models'    => $this->modelsToArray(),
 			'arguments' => $this->argumentsToArray(),
+			'data'      => $this->dataToArray(),
 			'headers'   => $this->headersToArray(),
 		];
 	}
@@ -193,6 +191,16 @@ class Request
 	public function argumentsToArray()
 	{
 		return $this->arguments();
+	}
+
+	/**
+	 * Return all data
+	 *
+	 * @return array
+	 */
+	public function dataToArray()
+	{
+		return $this->data();
 	}
 
 

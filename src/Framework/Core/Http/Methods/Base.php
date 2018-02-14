@@ -247,6 +247,9 @@ class Base
 					// Call any guards that might be set
 					$this->__callGuards();
 
+					// Call any middleware that might be set
+					$this->__callMiddleware();
+
 					// Call controller
 					$this->__callControllers($controller);
 
@@ -279,14 +282,27 @@ class Base
 	 */
 	final private function __callGuards()
 	{
-		// Check if any guards are set
-		if (!count($this->guards)) {
-			return;
-		}
-
 		// Loop through each guard
 		foreach ($this->guards as $guard) {
 			$this->__callClassMethod($guard);
+		}
+	}
+
+	/**
+	 * Call any middleware that are set
+	 *
+	 * @throws ClassMethodException
+	 * @return void
+	 */
+	final private function __callMiddleware()
+	{
+		// Loop through each guard
+		foreach ($this->middleware as $middleware) {
+			$res = $this->__callClassMethod($middleware);
+
+			if ($res instanceof Request) {
+				$this->request = $res;
+			}
 		}
 	}
 
@@ -310,11 +326,6 @@ class Base
 	 */
 	final private function __callTransformers()
 	{
-		// Check if any guards are set
-		if (!count($this->transformers)) {
-			return;
-		}
-
 		// Loop through each transformer
 		foreach ($this->transformers as $transformer) {
 			$this->result = $this->__callClassMethod($transformer);
@@ -373,6 +384,8 @@ class Base
 
 					$namespace = env('MODEL_NAMESPACE', '\App\\Database\\Models\\');
 
+					$this->__collectStaticData();
+
 					// Store arguments
 					foreach ($endpoint_arguments[1] as $key => $argument) {
 						$model = $namespace . Str::classify($argument);
@@ -394,22 +407,35 @@ class Base
 						$this->request->setArgument($argument, $uri_matches[ $key ]);
 					}
 
-					foreach ($_SERVER as $header => $value) {
-						if (strpos($header, 'HTTP_') === 0) {
-							$this->request->setHeader(str_replace('HTTP_', '', $header), $value);
-						}
-					}
-
 					return true;
 				}
 
 				return false;
 			}
 
-			// If no arguments, then just like-for-like compare
-			return $_SERVER['REQUEST_URI'] === $this->endpoint;
+			// If no arguments are passed then do a like for like comparison
+			if ($_SERVER['REQUEST_URI'] === $this->endpoint) {
+				$this->__collectStaticData();
+
+				return true;
+			}
 		}
 
 		return false;
+	}
+
+	final private function __collectStaticData()
+	{
+		$json = json_decode(file_get_contents('php://input'), true);
+
+		foreach (array_merge($_REQUEST, $json) as $item => $value) {
+			$this->request->setData($item, $value);
+		}
+
+		foreach ($_SERVER as $header => $value) {
+			if (strpos($header, 'HTTP_') === 0) {
+				$this->request->setHeader(str_replace('HTTP_', '', $header), $value);
+			}
+		}
 	}
 }
